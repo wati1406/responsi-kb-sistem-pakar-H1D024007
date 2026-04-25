@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diagnosa Kebiasaan Boros – Sistem Pakar</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --surface2: #1c1c28;
+    --border: #2a2a3d;
+    --accent: #c8f135;
+    --text: #f0f0f5;
+    --muted: #6b6b80;
+    --sehat: #c8f135;
+    --cukup: #f5c842;
+    --buruk: #f55142;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Poppins', sans-serif;
+    min-height: 100vh;
+  }
+  body::before {
+    content:'';
+    position:fixed; inset:0;
+    background-image:
+      linear-gradient(rgba(200,241,53,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(200,241,53,0.03) 1px, transparent 1px);
+    background-size:40px 40px;
+    pointer-events:none; z-index:0;
+  }
+  .wrapper {
+    position:relative; z-index:1;
+    max-width:680px; margin:0 auto;
+    padding:40px 24px 80px;
+  }
+  .badge {
+    display:inline-flex; align-items:center; gap:6px;
+    background:rgba(200,241,53,0.1);
+    border:1px solid rgba(200,241,53,0.25);
+    color:var(--accent);
+    font-size:11px; font-weight:500;
+    letter-spacing:0.1em; text-transform:uppercase;
+    padding:5px 12px; border-radius:20px; margin-bottom:16px;
+  }
+  .badge::before {
+    content:''; width:6px; height:6px;
+    background:var(--accent); border-radius:50%;
+    animation: pulse 2s infinite;
+  }
+  h1 {
+    font-family:'Poppins',sans-serif;
+    font-size:clamp(30px,6vw,48px);
+    font-weight:800; line-height:1.25;
+    letter-spacing:-0.02em; margin-bottom:10px;
+  }
+  h1 span { color:var(--accent); }
+  .subtitle { color:var(--muted); font-size:15px; line-height:1.6; margin-bottom:36px; }
+
+  .progress-wrap { margin-bottom:28px; }
+  .progress-info {
+    display:flex; justify-content:space-between;
+    font-size:12px; color:var(--muted); margin-bottom:8px;
+  }
+  .progress-bar-bg {
+    height:4px;
+    background:var(--surface2);
+    border:1px solid var(--border);
+    border-radius:99px; overflow:hidden;
+  }
+  .progress-bar-fill {
+    height:100%; background:var(--accent);
+    border-radius:99px; transition:width 0.4s ease;
+  }
+
+  .q-card {
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:20px; padding:28px;
+    margin-bottom:12px;
+    display:none;
+    animation:slideIn 0.4s ease;
+  }
+  .q-card.active { display:block; }
+  .q-num {
+    font-size:11px; font-weight:500;
+    letter-spacing:0.12em; text-transform:uppercase;
+    color:var(--muted); margin-bottom:10px;
+  }
+  .q-text {
+    font-family:'Poppins',sans-serif;
+    font-size:19px; font-weight:700;
+    line-height:1.3; margin-bottom:22px;
+    color:var(--text);
+  }
+  .options { display:flex; flex-direction:column; gap:9px; }
+  .opt {
+    background:var(--surface2);
+    border:1px solid var(--border);
+    border-radius:12px; padding:13px 16px;
+    text-align:left; cursor:pointer;
+    font-family:'Poppins',sans-serif;
+    font-size:14px; color:var(--text);
+    transition:all 0.18s;
+    display:flex; align-items:center; gap:12px;
+  }
+  .opt:hover { border-color:var(--accent); background:rgba(200,241,53,0.05); transform:translateX(4px); }
+  .opt.selected { border-color:var(--accent); background:rgba(200,241,53,0.08); color:var(--accent); font-weight:500; }
+  .opt-letter {
+    width:26px; height:26px; border-radius:8px;
+    background:var(--border); display:flex;
+    align-items:center; justify-content:center;
+    font-size:11px; font-weight:700; flex-shrink:0;
+    color:var(--muted);
+    transition:background 0.18s;
+  }
+  .opt.selected .opt-letter { background:var(--accent); color:#0a0a0f; }
+
+  .answer-preview {
+    display:none; margin-top:18px;
+    background:var(--surface2); border:1px solid var(--border);
+    border-radius:12px; padding:14px 16px;
+  }
+  .answer-preview.show { display:block; animation:fadeIn 0.3s ease; }
+  .answer-preview-label {
+    font-size:10px; font-weight:500;
+    letter-spacing:0.1em; text-transform:uppercase;
+    color:var(--muted); margin-bottom:5px;
+  }
+  .answer-preview-text { font-size:13px; color:var(--text); font-weight:500; margin-bottom:5px; }
+  .answer-preview-score { font-size:11px; display:flex; align-items:center; gap:5px; }
+  .score-dot { display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--sehat); }
+  .score-dot.med { background:var(--cukup); }
+  .score-dot.high { background:var(--buruk); }
+
+  .nav { display:flex; gap:12px; margin-top:4px; }
+  .btn-prev, .btn-next {
+    flex:1; padding:14px; border-radius:14px;
+    font-family:'Poppins',sans-serif;
+    font-size:14px; font-weight:700;
+    cursor:pointer; transition:all 0.15s;
+  }
+  .btn-prev {
+    background:transparent;
+    border:1px solid var(--border);
+    color:var(--muted);
+  }
+  .btn-prev:hover { border-color:var(--text); color:var(--text); }
+  .btn-next {
+    background:var(--accent);
+    border:1px solid var(--accent);
+    color:#0a0a0f;
+  }
+  .btn-next:hover { opacity:0.88; transform:translateY(-1px); }
+  .btn-next:disabled { opacity:0.35; cursor:not-allowed; transform:none; }
+
+  .loading {
+    display:none; text-align:center;
+    padding:32px; color:var(--muted); font-size:14px;
+  }
+  .spinner {
+    width:32px; height:32px;
+    border:2px solid var(--border);
+    border-top-color:var(--accent);
+    border-radius:50%;
+    animation:spin 0.8s linear infinite;
+    margin:0 auto 12px;
+  }
+
+  .result-wrap { display:none; }
+  .result-wrap.show { display:block; animation:fadeUp 0.5s ease; }
+
+  .result-hero {
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:20px; padding:32px; margin-bottom:12px;
+  }
+  .result-label {
+    font-size:11px; font-weight:500;
+    letter-spacing:0.12em; text-transform:uppercase;
+    color:var(--muted); margin-bottom:6px;
+  }
+  .result-title {
+    font-family:'Poppins',sans-serif;
+    font-size:clamp(22px,5vw,34px);
+    font-weight:800; line-height:1.1; margin-bottom:12px;
+    color:var(--text);
+  }
+  .result-desc { font-size:15px; color:var(--muted); line-height:1.65; margin-bottom:20px; }
+
+  .answer-summary { border-top:1px solid var(--border); padding-top:18px; }
+  .answer-summary-title {
+    font-size:11px; font-weight:500;
+    letter-spacing:0.1em; text-transform:uppercase;
+    color:var(--muted); margin-bottom:12px;
+  }
+  .answer-row {
+    display:flex; gap:10px; align-items:flex-start;
+    padding:9px 0; border-bottom:1px solid var(--border); font-size:13px;
+  }
+  .answer-row:last-child { border-bottom:none; }
+  .answer-row-num {
+    min-width:22px; height:22px; background:var(--surface2);
+    border-radius:6px; display:flex; align-items:center;
+    justify-content:center; font-size:11px; font-weight:700;
+    color:var(--muted); flex-shrink:0; margin-top:1px;
+  }
+  .answer-row-q { color:var(--muted); flex:1; line-height:1.5; }
+  .answer-row-a { font-weight:500; color:var(--text); text-align:right; min-width:130px; line-height:1.5; }
+
+  .diag-grid {
+    display:grid; grid-template-columns:1fr 1fr;
+    gap:10px; margin-bottom:12px;
+  }
+  .diag-card {
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:16px; padding:18px;
+  }
+  .diag-title {
+    font-size:11px; font-weight:500;
+    letter-spacing:0.06em; text-transform:uppercase;
+    color:var(--muted); margin-bottom:6px;
+  }
+  .diag-val {
+    font-family:'Poppins',sans-serif;
+    font-size:15px; font-weight:700;
+    color:var(--text);
+  }
+
+  .saran-card {
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:20px; padding:26px 28px;
+  }
+  .saran-head {
+    font-family:'Poppins',sans-serif;
+    font-size:19px; font-weight:800;
+    margin-bottom:18px; color:var(--text);
+  }
+  .saran-item {
+    display:flex; gap:12px;
+    padding:14px 0; border-bottom:1px solid var(--border);
+  }
+  .saran-item:last-child { border-bottom:none; padding-bottom:0; }
+  .saran-num {
+    width:26px; height:26px; background:var(--accent);
+    color:#0a0a0f; border-radius:8px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:12px; font-weight:700; flex-shrink:0;
+  }
+  .saran-text { font-size:14px; line-height:1.6; color:var(--muted); }
+  .saran-text strong { color:var(--text); }
+
+  .restart-btn {
+    width:100%; margin-top:14px; padding:15px;
+    background:transparent; border:1px solid var(--border);
+    border-radius:14px; font-family:'Poppins',sans-serif;
+    font-size:14px; font-weight:700;
+    color:var(--muted); cursor:pointer; transition:all 0.18s;
+  }
+  .restart-btn:hover { border-color:var(--text); color:var(--text); }
+
+  @keyframes slideIn { from{opacity:0;transform:translateX(20px)} to{opacity:1;transform:translateX(0)} }
+  @keyframes fadeIn  { from{opacity:0} to{opacity:1} }
+  @keyframes fadeUp  { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes spin    { to{transform:rotate(360deg)} }
+  @keyframes pulse   { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  @media(max-width:480px) {
+    .diag-grid{grid-template-columns:1fr;}
+    .answer-row{flex-direction:column;gap:4px;}
+    .answer-row-a{text-align:left;min-width:unset;}
+  }
+</style>
+</head>
+<body>
+<div class="wrapper">
+
+  <div class="badge">Sistem Pakar</div>
+  <h1>Diagnosa<br><span>Kebiasaan</span><br>Finansialmu</h1>
+  <p class="subtitle">Jawab 10 pertanyaan berikut. Sistem pakar akan menganalisis pola keuanganmu dan memberikan diagnosis serta rekomendasi konkret.</p>
+
+  <div class="progress-wrap" id="progressWrap">
+    <div class="progress-info">
+      <span id="progText">Pertanyaan 1 dari 10</span>
+      <span id="progPct">0%</span>
+    </div>
+    <div class="progress-bar-bg">
+      <div class="progress-bar-fill" id="progFill" style="width:0%"></div>
+    </div>
+  </div>
+
+  <div id="qWrap"></div>
+
+  <div class="nav" id="navWrap">
+    <button class="btn-prev" id="btnPrev" onclick="prev()">Kembali</button>
+    <button class="btn-next" id="btnNext" onclick="next()" disabled>Lanjut →</button>
+  </div>
+
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    Menganalisis kebiasaan finansialmu...
+  </div>
+
+  <div class="result-wrap" id="resultWrap">
+    <div class="result-hero">
+      <div class="result-label">Diagnosis Utama</div>
+      <div class="result-title" id="rTitle"></div>
+      <div class="result-desc" id="rDesc"></div>
+      <div class="answer-summary">
+        <div class="answer-summary-title">Ringkasan Jawaban Kamu</div>
+        <div id="answerSummary"></div>
+      </div>
+    </div>
+    <div class="diag-grid">
+      <div class="diag-card"><div class="diag-title">Tipe Kebiasaan</div><div class="diag-val" id="dTipe"></div></div>
+      <div class="diag-card"><div class="diag-title">Level Risiko</div><div class="diag-val" id="dRisiko"></div></div>
+      <div class="diag-card"><div class="diag-title">Fokus Utama</div><div class="diag-val" id="dFokus"></div></div>
+      <div class="diag-card"><div class="diag-title">Target Perbaikan</div><div class="diag-val" id="dTarget"></div></div>
+    </div>
+    <div class="saran-card">
+      <div class="saran-head">Solusi dan Langkah yang harus di lakukan</div>
+      <div id="saranItems"></div>
+    </div>
+    <button class="restart-btn" onclick="restart()">Ulangi Diagnosa</button>
+  </div>
+</div>
+
+<script>
+const QS = [
+  { q:"Seberapa sering kamu membeli sesuatu tanpa direncanakan sebelumnya?",
+    opts:[{l:"Hampir tidak pernah",v:0},{l:"Kadang-kadang (1-2x sebulan)",v:1},{l:"Sering (setiap minggu)",v:2},{l:"Hampir setiap hari",v:3}] },
+  { q:"Apakah kamu memiliki tabungan yang aktif ditambah setiap bulan?",
+    opts:[{l:"Ya, rutin menabung 20%+ dari pemasukan",v:0},{l:"Ya, tapi tidak tentu jumlahnya",v:1},{l:"Jarang, hanya kalau ada sisa",v:2},{l:"Tidak ada tabungan sama sekali",v:3}] },
+  { q:"Bagaimana kebiasaanmu makan/jajan di luar?",
+    opts:[{l:"Masak sendiri, jajan sekali-kali",v:0},{l:"Jajan 2-3x seminggu, masih terkontrol",v:1},{l:"Jajan hampir setiap hari",v:2},{l:"Selalu makan/pesan di luar, tidak pernah masak",v:3}] },
+  { q:"Apakah kamu memiliki budget/anggaran bulanan yang kamu ikuti?",
+    opts:[{l:"Ya, ada dan disiplin mengikutinya",v:0},{l:"Ada, tapi sering meleset",v:1},{l:"Tidak ada, tapi masih bisa kontrol",v:2},{l:"Tidak ada, pengeluaran tidak terkontrol",v:3}] },
+  { q:"Bagaimana kondisi utang/cicilan aktifmu saat ini?",
+    opts:[{l:"Tidak ada utang sama sekali",v:0},{l:"Ada cicilan produktif, masih aman",v:1},{l:"Ada beberapa cicilan, agak berat",v:2},{l:"Banyak cicilan/utang konsumtif, sangat berat",v:3}] },
+  { q:"Apa yang biasanya kamu lakukan saat gajian/terima uang?",
+    opts:[{l:"Langsung sisihkan tabungan & investasi dulu",v:0},{l:"Bayar kebutuhan pokok dulu, sisanya ditabung",v:1},{l:"Bayar kebutuhan, sisa dipakai bebas",v:2},{l:"Langsung habis dalam beberapa hari",v:3}] },
+  { q:"Apakah kamu memiliki dana darurat (3-6 bulan pengeluaran)?",
+    opts:[{l:"Ya, lebih dari 6 bulan pengeluaran",v:0},{l:"Ya, sekitar 3-6 bulan",v:1},{l:"Ada sedikit, kurang dari 3 bulan",v:2},{l:"Tidak ada sama sekali",v:3}] },
+  { q:"Bagaimana perasaanmu setelah membeli barang mahal/tidak direncanakan?",
+    opts:[{l:"Jarang beli barang tidak perlu",v:0},{l:"Senang, karena memang sudah direncanakan",v:0},{l:"Senang sesaat, lalu menyesal",v:2},{l:"Menyesal dan merasa bersalah",v:3}] },
+  { q:"Seberapa sering kamu membandingkan harga sebelum membeli sesuatu?",
+    opts:[{l:"Selalu membandingkan harga terlebih dahulu",v:0},{l:"Kadang-kadang, untuk pembelian besar saja",v:1},{l:"Jarang, langsung beli yang pertama ditemukan",v:2},{l:"Tidak pernah, langsung beli tanpa pikir panjang",v:3}] },
+  { q:"Bagaimana sikapmu terhadap diskon/promo belanja?",
+    opts:[{l:"Tidak terpengaruh, beli hanya kalau memang butuh",v:0},{l:"Kadang beli kalau memang butuh dan kebetulan diskon",v:1},{l:"Sering tergoda beli barang diskon meski tidak butuh",v:2},{l:"Selalu beli semua yang diskon, susah menahan diri",v:3}] }
+];
+
+const DIAGNOSES = [
+  {
+    min: 0, max: 6,
+    diagnosis: "Finansial Sehat & Terkendali",
+    deskripsi: "Kebiasaan finansialmu sangat baik. Kamu sudah memiliki pola yang terencana, menabung secara konsisten, dan tidak mudah tergoda pengeluaran impulsif. Pertahankan dan tingkatkan ke level investasi berikutnya.",
+    tipe: "Terencana & Disiplin",
+    risiko: "Rendah",
+    risikoWarna: "var(--sehat)",
+    fokus: "Optimasi & Investasi",
+    target: "Mulai investasi reksa dana / saham dalam 30 hari",
+    saran: [
+      { judul:"Tingkatkan ke Investasi", isi:"Karena tabungan sudah solid, alokasikan 10–20% pemasukan ke instrumen investasi seperti reksa dana pasar uang atau saham indeks." },
+      { judul:"Buat Rencana Keuangan 5 Tahun", isi:"Tulis tujuan finansial jangka menengah: rumah, dana pensiun, pendidikan. Pecah menjadi target tahunan dan bulanan yang konkret." },
+      { judul:"Review Budget Tiap Kuartal", isi:"Setiap 3 bulan, evaluasi apakah alokasi anggaran masih sesuai dengan kondisi hidup dan tujuan finansialmu saat ini." },
+      { judul:"Bangun Passive Income", isi:"Pertimbangkan sumber penghasilan pasif seperti dividen, deposito, atau side business kecil untuk mempercepat kebebasan finansial." }
+    ]
+  },
+  {
+    min: 7, max: 13,
+    diagnosis: "Waspada — Ada Celah yang Perlu Ditambal",
+    deskripsi: "Kondisi finansialmu cukup stabil, tapi ada beberapa kebiasaan yang perlu diperhatikan. Kamu kadang tergoda pengeluaran tidak terencana dan belum konsisten menabung. Perbaikan kecil sekarang akan berdampak besar dalam jangka panjang.",
+    tipe: "Semi-Terencana",
+    risiko: "Sedang",
+    risikoWarna: "var(--cukup)",
+    fokus: "Konsistensi & Disiplin",
+    target: "Buat dan ikuti anggaran ketat selama 60 hari ke depan",
+    saran: [
+      { judul:"Terapkan Metode 50/30/20", isi:"Bagi pemasukan: 50% kebutuhan pokok, 30% keinginan, 20% tabungan & investasi. Otomatis transfer ke rekening tabungan di hari gajian." },
+      { judul:"Identifikasi Kebocoran Anggaran", isi:"Catat semua pengeluaran selama 2 minggu. Kamu akan menemukan 2–3 kategori boros yang selama ini tidak disadari, seperti langganan tidak terpakai atau jajan harian." },
+      { judul:"Bangun Dana Darurat Dulu", isi:"Prioritaskan mengumpulkan dana darurat minimal 3 bulan pengeluaran sebelum memikirkan investasi agresif. Ini jaring pengaman utama." },
+      { judul:"Aturan 24 Jam untuk Pembelian Impulsif", isi:"Untuk setiap pembelian di luar kebutuhan, tunggu 24 jam sebelum membelinya. Lebih dari 60% keinginan impulsif akan hilang setelah tidur semalam." }
+    ]
+  },
+  {
+    min: 14, max: 20,
+    diagnosis: "Pola Boros Aktif — Perlu Intervensi Segera",
+    deskripsi: "Kebiasaan finansialmu menunjukkan pola boros yang cukup serius. Pengeluaran sering tidak terkontrol, tabungan minim atau tidak ada, dan kamu rentan terhadap utang konsumtif. Tanpa perubahan nyata, kondisi ini akan semakin berat seiring waktu.",
+    tipe: "Konsumtif Impulsif",
+    risiko: "Tinggi",
+    risikoWarna: "var(--buruk)",
+    fokus: "Kontrol Pengeluaran & Tabungan Darurat",
+    target: "Pangkas 3 kategori pengeluaran tidak perlu minggu ini",
+    saran: [
+      { judul:"Stop Semua Langganan Tidak Penting", isi:"Audit semua biaya berulang: streaming, aplikasi, membership. Batalkan semua yang tidak dipakai aktif. Ini bisa menghemat ratusan ribu per bulan tanpa terasa." },
+      { judul:"Mulai Tabungan Rp10.000/hari", isi:"Mulai dengan jumlah kecil yang tidak menyakitkan. Rp10.000 per hari = Rp300.000 per bulan = Rp3,6 juta per tahun. Konsistensi lebih penting dari jumlah." },
+      { judul:"Hapus Aplikasi Belanja dari HP", isi:"Hapus aplikasi belanja dari halaman utama HP dan nonaktifkan notifikasi promo. Akses yang lebih sulit terbukti mengurangi pembelian impulsif secara signifikan." },
+      { judul:"Cari Akuntabilitas Partner", isi:"Beritahu satu orang terpercaya tentang tujuan finansialmu. Check-in mingguan terbukti meningkatkan keberhasilan target keuangan secara signifikan." }
+    ]
+  },
+  {
+    min: 21, max: 30,
+    diagnosis: "Krisis Finansial — Butuh Perubahan Radikal",
+    deskripsi: "Kondisi finansialmu dalam zona berbahaya. Utang konsumtif tinggi, tidak ada tabungan atau dana darurat, dan pola pengeluaran jauh melebihi kemampuan. Tanpa tindakan drastis sekarang, situasi ini bisa berujung pada masalah serius dalam 6–12 bulan ke depan.",
+    tipe: "Krisis & Tidak Terkontrol",
+    risiko: "Sangat Tinggi",
+    risikoWarna: "var(--buruk)",
+    fokus: "Restrukturisasi Utang & Penyelamatan Arus Kas",
+    target: "Buat daftar semua utang hari ini, lalu konsultasi ke OJK",
+    saran: [
+      { judul:"Buat Daftar Lengkap Semua Utang", isi:"Tulis semua utang: nama kreditur, jumlah, bunga, dan tanggal jatuh tempo. Kamu tidak bisa menyelesaikan masalah yang tidak kamu ukur." },
+      { judul:"Lunasi Utang Bunga Tertinggi Dulu", isi:"Metode Avalanche: bayar minimum semua utang, lalu fokuskan sisa uang ke utang dengan bunga tertinggi. Ini cara paling efisien mengurangi total beban bunga." },
+      { judul:"Cari Tambahan Penghasilan Segera", isi:"Pertimbangkan freelance, jual barang tidak terpakai, atau kerja paruh waktu. Bahkan tambahan Rp500.000–1 juta per bulan sudah signifikan untuk keluar dari krisis." },
+      { judul:"Konsultasi ke OJK atau Konsultan Keuangan", isi:"Jika utang sudah sangat berat, pertimbangkan restrukturisasi melalui lembaga resmi. OJK menyediakan layanan konsultasi keuangan gratis di ojk.go.id." }
+    ]
+  }
+];
+
+function diagnose(scores) {
+  const total = scores.reduce((a, b) => a + (b || 0), 0);
+  const noTabungan  = scores[1] >= 2;
+  const banyakUtang = scores[4] >= 2;
+  const impulsBeli  = scores[0] >= 2;
+  const tidakBudget = scores[3] >= 2;
+  let escalate = 0;
+  if (noTabungan && banyakUtang) escalate += 3;
+  if (impulsBeli && tidakBudget) escalate += 2;
+  const adjusted = Math.min(30, total + escalate);
+  return DIAGNOSES.find(d => adjusted >= d.min && adjusted <= d.max) || DIAGNOSES[3];
+}
+
+let cur = 0;
+let ans = new Array(QS.length).fill(null);
+let ansLabels = new Array(QS.length).fill(null);
+
+function scoreColor(v){ return v===0?'var(--sehat)':v===1?'var(--cukup)':'var(--buruk)'; }
+function scoreDotClass(v){ return v===0?'score-dot':v===1?'score-dot med':'score-dot high'; }
+function scoreLabel(v){ return v===0?'Aman':v===1?'Perlu Perhatian':'Berisiko'; }
+
+function init() {
+  const qw = document.getElementById('qWrap');
+  qw.innerHTML = QS.map((q,i)=>`
+    <div class="q-card ${i===0?'active':''}" id="qc${i}">
+      <div class="q-num">Pertanyaan ${i+1} dari ${QS.length}</div>
+      <div class="q-text">${q.q}</div>
+      <div class="options">
+        ${q.opts.map((o,j)=>`
+          <button class="opt" onclick="pick(${i},${j},${o.v})" id="o${i}_${j}">
+            <span class="opt-letter">${String.fromCharCode(65+j)}</span>
+            ${o.l}
+          </button>
+        `).join('')}
+      </div>
+      <div class="answer-preview" id="prev${i}">
+        <div class="answer-preview-label">Jawaban kamu</div>
+        <div class="answer-preview-text" id="prevText${i}"></div>
+        <div class="answer-preview-score" id="prevScore${i}"></div>
+      </div>
+    </div>
+  `).join('');
+  updateUI();
+}
+
+function pick(qi, oi, val) {
+  ans[qi] = val;
+  ansLabels[qi] = QS[qi].opts[oi].l;
+  QS[qi].opts.forEach((_,j)=>document.getElementById(`o${qi}_${j}`).classList.remove('selected'));
+  document.getElementById(`o${qi}_${oi}`).classList.add('selected');
+  document.getElementById('btnNext').disabled = false;
+  document.getElementById(`prevText${qi}`).textContent = QS[qi].opts[oi].l;
+  document.getElementById(`prevScore${qi}`).innerHTML =
+    `<span class="${scoreDotClass(val)}"></span><span style="color:${scoreColor(val)}">${scoreLabel(val)}</span>`;
+  document.getElementById(`prev${qi}`).classList.add('show');
+}
+
+function updateUI() {
+  const pct = Math.round((cur / QS.length) * 100);
+  document.getElementById('progText').textContent = `Pertanyaan ${cur+1} dari ${QS.length}`;
+  document.getElementById('progPct').textContent = pct + '%';
+  document.getElementById('progFill').style.width = pct + '%';
+  document.getElementById('btnPrev').style.opacity = cur === 0 ? '0.3' : '1';
+  document.getElementById('btnPrev').style.pointerEvents = cur === 0 ? 'none' : 'auto';
+  const isLast = cur === QS.length - 1;
+  document.getElementById('btnNext').textContent = isLast ? 'Lihat Diagnosis' : 'Lanjut';
+  document.getElementById('btnNext').disabled = ans[cur] === null;
+}
+
+function prev() {
+  if (cur === 0) return;
+  document.getElementById(`qc${cur}`).classList.remove('active');
+  cur--;
+  setTimeout(() => document.getElementById(`qc${cur}`).classList.add('active'), 10);
+  updateUI();
+}
+
+function next() {
+  if (ans[cur] === null) return;
+  if (cur === QS.length - 1) { kirim(); return; }
+  document.getElementById(`qc${cur}`).classList.remove('active');
+  cur++;
+  setTimeout(() => document.getElementById(`qc${cur}`).classList.add('active'), 10);
+  updateUI();
+}
+
+function kirim() {
+  document.getElementById('qWrap').style.display = 'none';
+  document.getElementById('navWrap').style.display = 'none';
+  document.getElementById('progressWrap').style.display = 'none';
+  document.getElementById('loading').style.display = 'block';
+  setTimeout(() => {
+    const d = diagnose(ans);
+    document.getElementById('loading').style.display = 'none';
+    tampilResult(d);
+  }, 1200);
+}
+
+function tampilResult(d) {
+  document.getElementById('rTitle').textContent  = d.diagnosis;
+  document.getElementById('rTitle').style.color  = d.risikoWarna;
+  document.getElementById('rDesc').textContent   = d.deskripsi;
+  document.getElementById('dTipe').textContent   = d.tipe;
+  document.getElementById('dRisiko').textContent = d.risiko;
+  document.getElementById('dRisiko').style.color = d.risikoWarna;
+  document.getElementById('dFokus').textContent  = d.fokus;
+  document.getElementById('dTarget').textContent = d.target;
+
+  document.getElementById('saranItems').innerHTML = d.saran.map((s, i) => `
+    <div class="saran-item">
+      <div class="saran-num">${i+1}</div>
+      <div class="saran-text"><strong>${s.judul}.</strong> ${s.isi}</div>
+    </div>
+  `).join('');
+
+  document.getElementById('answerSummary').innerHTML = QS.map((q, i) => `
+    <div class="answer-row">
+      <div class="answer-row-num">${i+1}</div>
+      <div class="answer-row-q">${q.q}</div>
+      <div class="answer-row-a" style="color:${scoreColor(ans[i])}">${ansLabels[i] || '-'}</div>
+    </div>
+  `).join('');
+
+  document.getElementById('resultWrap').className = 'result-wrap show';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function restart() {
+  cur = 0;
+  ans = new Array(QS.length).fill(null);
+  ansLabels = new Array(QS.length).fill(null);
+  document.getElementById('qWrap').style.display = '';
+  document.getElementById('navWrap').style.display = '';
+  document.getElementById('progressWrap').style.display = '';
+  document.getElementById('resultWrap').className = 'result-wrap';
+  QS.forEach((_, i) => {
+    document.getElementById(`qc${i}`).classList.remove('active');
+    QS[i].opts.forEach((_, j) => document.getElementById(`o${i}_${j}`).classList.remove('selected'));
+    document.getElementById(`prev${i}`).classList.remove('show');
+  });
+  document.getElementById('qc0').classList.add('active');
+  updateUI();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+init();
+</script>
+</body>
+</html>
