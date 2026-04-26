@@ -14,4 +14,4 @@ def api_pakar():
     return jsonify(hasil)
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5001)  # beda port biar tidak bentrok
+    app.run(debug=True, port=5001)  

@@ -1,6 +1,5 @@
 def diagnosa_boros(jawaban):
-    # Ambil 8 jawaban pertama untuk kompatibilitas logika lama
-    # Pertanyaan 9 & 10 digunakan sebagai booster skor
+   
     if len(jawaban) < 8:
         return {"error": "Jawaban tidak lengkap"}
 
@@ -13,7 +12,6 @@ def diagnosa_boros(jawaban):
     total       = sum(j)
     pct         = total / (8 * 3)
 
-    # Booster dari pertanyaan 9 & 10 jika ada
     booster = 0
     if len(jawaban) >= 10:
         booster = jawaban[8] + jawaban[9]
